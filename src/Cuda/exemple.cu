@@ -36,7 +36,11 @@ void save_image(const char *filename, Image *img) {
  
 // Filtre bilatéral implémenté sur GPU
 __global__ void bilateral_filter_cuda(unsigned char *d_input, unsigned char *d_output, int width, int height) {
-    // Calcul de la position du thread dans l'image
+    // Calcul de la position du thread dans l'image -> un thread est assigné à chaque pixel unique de l’image.
+    // Thread permet : une exécution parallèle, l'optimisation des performances et la réactivité
+    // blockIdx.x et blockIdx.y : Indice du bloc actuel
+    // blockDim.x et blockDim.y : Nombre de threads par bloc
+    // threadIdx.x et threadIdx.y : Indice du thread dans son bloc
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
  
@@ -48,7 +52,7 @@ __global__ void bilateral_filter_cuda(unsigned char *d_input, unsigned char *d_o
     float sum_r = 0, sum_g = 0, sum_b = 0, norm_factor = 0;
     float sigma_s2 = 2.0 * SIGMA_S * SIGMA_S; // Variance du filtre spatial
     float sigma_r2 = 2.0 * SIGMA_R * SIGMA_R; // Variance du filtre en intensité
-    int half_size = KERNEL_SIZE / 2; // Moitié de la taille du noyau
+    int half_size = KERNEL_SIZE / 2;          // Moitié de la taille du noyau
  
     // Récupération des valeurs des canaux du pixel central
     unsigned char r = d_input[idx], g = d_input[idx+1], b = d_input[idx+2];
@@ -58,7 +62,9 @@ __global__ void bilateral_filter_cuda(unsigned char *d_input, unsigned char *d_o
         for (int j = -half_size; j <= half_size; j++) {
             int yy = y + i;
             int xx = x + j;
-            if (xx >= 0 && xx < width && yy >= 0 && yy < height) { // Vérifier si le voisin est dans l'image
+
+            // Si le voisin est dans l'image
+            if (xx >= 0 && xx < width && yy >= 0 && yy < height) {
                 int neighbor_idx = 4 * (yy * width + xx);
                 unsigned char nr = d_input[neighbor_idx], ng = d_input[neighbor_idx+1], nb = d_input[neighbor_idx+2];
                 
@@ -86,9 +92,10 @@ __global__ void bilateral_filter_cuda(unsigned char *d_input, unsigned char *d_o
  
 // Fonction de gestion du filtre bilatéral en CUDA
 void bilateral_filter(Image *img) {
-    int width = img->width;
-    int height = img->height;
-    size_t img_size = width * height * 4 * sizeof(unsigned char);
+    // Initialisation des variables
+    int width = img->width;   // Width de l'image
+    int height = img->height; // Height de l'image
+    size_t img_size = width * height * 4 * sizeof(unsigned char); // Dimensions de l'image
     unsigned char *d_input, *d_output;
     
     // Allocation mémoire sur GPU
