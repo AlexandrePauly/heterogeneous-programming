@@ -64,6 +64,7 @@ __global__ void bilateral_filter_cuda(unsigned char *d_input, unsigned char *d_o
             int xx = x + j;
 
             // Si le voisin est dans l'image
+            // C'est pour cette raison, que le lissage est meilleur au centre de l'image que sur les bords.
             if (xx >= 0 && xx < width && yy >= 0 && yy < height) {
                 int neighbor_idx = 4 * (yy * width + xx);
                 unsigned char nr = d_input[neighbor_idx], ng = d_input[neighbor_idx+1], nb = d_input[neighbor_idx+2];
